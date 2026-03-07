@@ -51,6 +51,7 @@ export function DiaryApp() {
   const [isEditing, setIsEditing] = useState<boolean>(true);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [showMonthEntries, setShowMonthEntries] = useState<boolean>(false);
+  const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [monthExportFields, setMonthExportFields] = useState<ExportField[]>([]);
   const [monthExportRows, setMonthExportRows] = useState<ExportRow[]>([]);
   const [monthExportLoading, setMonthExportLoading] = useState<boolean>(false);
@@ -262,23 +263,36 @@ export function DiaryApp() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8">
-      <header className="mb-4 card p-4 md:p-5 fade-in">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-              在线日记本
-            </h1>
-            <p className="text-sm text-[#4d5a72]">每天仅一条日记，键格式：journal:YYYY-MM-DD（编辑会更新当天记录）。</p>
-          </div>
-          <div className="flex flex-col gap-2 md:items-end">
-            <Link className="text-sm text-[#ca552f] underline" href="/template">
-              编辑模板
-            </Link>
-          </div>
+      <section className="mb-4 card p-4 fade-in">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+            日历
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowCalendar((prev) => !prev)}
+            className="h-9 rounded-lg border border-[#ddcfb6] bg-white px-3 text-sm"
+          >
+            {showCalendar ? "收起" : "展开"}
+          </button>
         </div>
-      </header>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-[1.1fr_1fr]">
+      {showCalendar && (
+        <div className="mb-4">
+          <Calendar
+            viewDate={viewDate}
+            selectedDate={selectedDate}
+            recordedDates={dates}
+            streakMap={streakMap}
+            onSelect={onSelectDate}
+            onChangeMonth={changeMonth}
+            onViewAllInMonth={toggleMonthEntries}
+          />
+        </div>
+      )}
+
+      <div className="grid gap-4">
         <TodayInput
           date={selectedDate}
           template={activeTemplate}
@@ -290,15 +304,6 @@ export function DiaryApp() {
           isEditing={isEditing}
           hasEntry={hasEntry}
           status={status}
-        />
-        <Calendar
-          viewDate={viewDate}
-          selectedDate={selectedDate}
-          recordedDates={dates}
-          streakMap={streakMap}
-          onSelect={onSelectDate}
-          onChangeMonth={changeMonth}
-          onViewAllInMonth={toggleMonthEntries}
         />
       </div>
 
@@ -413,6 +418,22 @@ export function DiaryApp() {
           </button>
         </div>
       </section>
+
+      <header className="mt-4 card p-4 md:p-5 fade-in">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+              在线日记本
+            </h1>
+            <p className="text-sm text-[#4d5a72]">每天仅一条日记，键格式：journal:YYYY-MM-DD（编辑会更新当天记录）。</p>
+          </div>
+          <div className="flex flex-col gap-2 md:items-end">
+            <Link className="text-sm text-[#ca552f] underline" href="/template">
+              编辑模板
+            </Link>
+          </div>
+        </div>
+      </header>
     </main>
   );
 }
