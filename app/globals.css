@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f4efe5;
+  --bg-soft: #f9f7f2;
+  --ink: #1b2a44;
+  --accent: #ca552f;
+  --heat-0: #e8e3d9;
+  --heat-1: #c9ddc0;
+  --heat-2: #9fc28f;
+  --heat-3: #6e9e66;
+  --heat-4: #476e42;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 15% 0%, #efe2c6 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, #d4e6c8 0%, transparent 30%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+.card {
+  border: 1px solid #dbcdb4;
+  border-radius: 14px;
+  background: #fffdfa;
+  box-shadow: 0 7px 18px rgba(33, 22, 8, 0.07);
+}
+
+.heat-0 { background: var(--heat-0); }
+.heat-1 { background: var(--heat-1); }
+.heat-2 { background: var(--heat-2); }
+.heat-3 { background: var(--heat-3); }
+.heat-4 { background: var(--heat-4); }
+
+.fade-in {
+  animation: fade-in 320ms ease-out both;
+}
+
+@keyframes fade-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
