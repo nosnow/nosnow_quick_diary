@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarCell } from "@/components/calendar-cell";
+import { todayDateStringUTC8 } from "@/lib/date";
 
 type CalendarProps = {
   viewDate: string;
@@ -31,7 +32,7 @@ export function Calendar({
   const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
   const monthEntryCount = recordedDates.filter((d) => d.startsWith(`${monthPrefix}-`)).length;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDateStringUTC8();
 
   return (
     <section className="card p-4 md:p-6 fade-in">

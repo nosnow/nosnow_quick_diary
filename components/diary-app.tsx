@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Calendar } from "@/components/calendar";
 import { TodayInput } from "@/components/today-input";
+import { todayDateStringUTC8 } from "@/lib/date";
 import { DiaryRecord, TemplateField } from "@/lib/types";
 
 const EMPTY_RECORD: DiaryRecord = {};
@@ -21,7 +22,7 @@ type ExportRow = {
 };
 
 function todayString(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayDateStringUTC8();
 }
 
 function buildStreakMap(dates: string[]): Record<string, number> {
@@ -76,13 +77,26 @@ export function DiaryApp() {
         };
         const calendarJson = (await calendarRes.json()) as {
           dates?: string[];
-          records?: Record<string, DiaryRecord>;
         };
+
+        const nextDates = Array.isArray(calendarJson.dates) ? calendarJson.dates : [];
+        const initialDate = todayString();
+        let initialRecordMap: Record<string, DiaryRecord> = {};
+
+        if (nextDates.includes(initialDate)) {
+          const recordRes = await fetch(`/api/record/${initialDate}`);
+          if (recordRes.ok) {
+            const recordJson = (await recordRes.json()) as { record?: DiaryRecord | null };
+            if (recordJson.record && typeof recordJson.record === "object") {
+              initialRecordMap = { [initialDate]: recordJson.record };
+            }
+          }
+        }
 
         setTemplate(Array.isArray(templateJson.template) ? templateJson.template : []);
         setFieldLabels(templateJson.fieldLabels ?? {});
-        setDates(Array.isArray(calendarJson.dates) ? calendarJson.dates : []);
-        setRecords(calendarJson.records ?? {});
+        setDates(nextDates);
+        setRecords(initialRecordMap);
         setStatus("已就绪");
         setDataLoaded(true);
       } catch {
@@ -93,36 +107,62 @@ export function DiaryApp() {
   }, []);
 
   const hasEntry = dates.includes(selectedDate);
-  const savedRecord = records[selectedDate] ?? EMPTY_RECORD;
+  const selectedRecord = records[selectedDate];
+  const savedRecord = selectedRecord ?? EMPTY_RECORD;
 
   const activeTemplate = useMemo<TemplateField[]>(() => {
     if (!hasEntry || isEditing) return template;
 
-    const templateMap = new Map(template.map((item) => [item.id, item] as const));
-    const recordKeys = Object.keys(savedRecord);
+    const templateIds = new Set(template.map((item) => item.id));
+    const legacyFields = Object.keys(savedRecord)
+      .filter((key) => !templateIds.has(key))
+      .map((key) => {
+        const fallbackLabel = fieldLabels[key] ?? key;
+        const value = savedRecord[key];
 
-    return recordKeys.map((key) => {
-      const fromTemplate = templateMap.get(key);
-      if (fromTemplate) return fromTemplate;
+        if (typeof value === "boolean") {
+          return { id: key, label: fallbackLabel, type: "boolean" } as const;
+        }
+        if (typeof value === "number") {
+          return { id: key, label: fallbackLabel, type: "number" } as const;
+        }
 
-      const fallbackLabel = fieldLabels[key] ?? key;
+        return { id: key, label: fallbackLabel, type: "text" } as const;
+      });
 
-      const value = savedRecord[key];
-      if (typeof value === "boolean") {
-        return { id: key, label: fallbackLabel, type: "boolean" };
-      }
-      if (typeof value === "number") {
-        return { id: key, label: fallbackLabel, type: "number" };
-      }
-
-      return { id: key, label: fallbackLabel, type: "text" };
-    });
+    return [...template, ...legacyFields];
   }, [hasEntry, isEditing, template, savedRecord, fieldLabels]);
 
   const monthPrefix = useMemo(() => viewDate.slice(0, 7), [viewDate]);
 
   useEffect(() => {
+    if (!dataLoaded || !hasEntry || selectedRecord) return;
+
+    let cancelled = false;
+
+    async function loadSelectedRecord() {
+      setStatus("加载日记中...");
+      const res = await fetch(`/api/record/${selectedDate}`, { cache: "no-store" });
+      if (!res.ok || cancelled) return;
+
+      const json = (await res.json()) as { record?: DiaryRecord | null };
+      if (cancelled) return;
+
+      if (json.record && typeof json.record === "object") {
+        setRecords((prev) => ({ ...prev, [selectedDate]: json.record as DiaryRecord }));
+      }
+    }
+
+    void loadSelectedRecord();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dataLoaded, hasEntry, selectedDate, selectedRecord]);
+
+  useEffect(() => {
     if (!dataLoaded) return;
+    if (hasEntry && !selectedRecord) return;
 
     setDraftRecord(savedRecord);
     if (hasEntry) {
@@ -132,7 +172,7 @@ export function DiaryApp() {
       setIsEditing(true);
       setStatus("新建模式");
     }
-  }, [selectedDate, hasEntry, savedRecord, dataLoaded]);
+  }, [selectedDate, hasEntry, savedRecord, dataLoaded, selectedRecord]);
 
   async function persist(nextDate: string, nextRecord: DiaryRecord) {
     setStatus("保存中...");

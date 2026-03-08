@@ -1,6 +1,7 @@
 "use client";
 
 import { TemplateField } from "@/lib/types";
+import { todayDateStringUTC8 } from "@/lib/date";
 
 type TodayInputProps = {
   date: string;
@@ -57,7 +58,7 @@ export function TodayInput({
   hasEntry,
   status
 }: TodayInputProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDateStringUTC8();
   const dateText = new Date(`${date}T00:00:00`).toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
 
   return (
@@ -101,7 +102,7 @@ export function TodayInput({
                   onClick={() => onChange(field.id, !(value === true))}
                   className={`h-11 rounded-lg border px-4 text-base ${value === true ? "border-[#4f7d45] bg-[#e3f0df]" : "border-[#ddcfb6] bg-white"} ${!isEditing ? "cursor-not-allowed opacity-70" : ""}`}
                 >
-                  {value === true ? "是" : "否"}
+                  {value === true ? "是" : value === false ? "否" : "未填写"}
                 </button>
               )}
 

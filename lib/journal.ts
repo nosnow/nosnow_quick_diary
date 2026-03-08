@@ -1,4 +1,5 @@
 import { INDEX_KEY, TEMPLATE_KEY, DEFAULT_TEMPLATE, FIELD_LABELS_KEY } from "@/lib/constants";
+import { todayDateStringUTC8 } from "@/lib/date";
 import { redis } from "@/lib/redis";
 import { DiaryRecord, TemplateField } from "@/lib/types";
 
@@ -43,7 +44,7 @@ export function getRecordKey(date: string): string {
 }
 
 export function todayDateString(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayDateStringUTC8();
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
