@@ -65,36 +65,30 @@ export function DiaryApp() {
   useEffect(() => {
     async function load() {
       try {
-        const [templateRes, calendarRes] = await Promise.all([fetch("/api/template"), fetch("/api/calendar")]);
+        const initialDate = todayString();
+        const bootstrapRes = await fetch(`/api/bootstrap?date=${initialDate}`, { cache: "no-store" });
 
-        if (!templateRes.ok || !calendarRes.ok) {
+        if (!bootstrapRes.ok) {
           throw new Error("API request failed");
         }
 
-        const templateJson = (await templateRes.json()) as {
+        const bootstrapJson = (await bootstrapRes.json()) as {
           template?: TemplateField[];
           fieldLabels?: Record<string, string>;
-        };
-        const calendarJson = (await calendarRes.json()) as {
           dates?: string[];
+          date?: string;
+          record?: DiaryRecord | null;
         };
 
-        const nextDates = Array.isArray(calendarJson.dates) ? calendarJson.dates : [];
-        const initialDate = todayString();
+        const nextDates = Array.isArray(bootstrapJson.dates) ? bootstrapJson.dates : [];
         let initialRecordMap: Record<string, DiaryRecord> = {};
 
-        if (nextDates.includes(initialDate)) {
-          const recordRes = await fetch(`/api/record/${initialDate}`);
-          if (recordRes.ok) {
-            const recordJson = (await recordRes.json()) as { record?: DiaryRecord | null };
-            if (recordJson.record && typeof recordJson.record === "object") {
-              initialRecordMap = { [initialDate]: recordJson.record };
-            }
-          }
+        if (nextDates.includes(initialDate) && bootstrapJson.record && typeof bootstrapJson.record === "object") {
+          initialRecordMap = { [initialDate]: bootstrapJson.record };
         }
 
-        setTemplate(Array.isArray(templateJson.template) ? templateJson.template : []);
-        setFieldLabels(templateJson.fieldLabels ?? {});
+        setTemplate(Array.isArray(bootstrapJson.template) ? bootstrapJson.template : []);
+        setFieldLabels(bootstrapJson.fieldLabels ?? {});
         setDates(nextDates);
         setRecords(initialRecordMap);
         setStatus("已就绪");
