@@ -102,7 +102,7 @@ export function TodayInput({
                   onClick={() => onChange(field.id, !(value === true))}
                   className={`h-11 rounded-lg border px-4 text-base ${value === true ? "border-[#4f7d45] bg-[#e3f0df]" : "border-[#ddcfb6] bg-white"} ${!isEditing ? "cursor-not-allowed opacity-70" : ""}`}
                 >
-                  {value === true ? "是" : value === false ? "否" : "未填写"}
+                  {value === true ? "是" : "否"}
                 </button>
               )}
 
