@@ -3,6 +3,7 @@ import {
   TEMPLATE_KEY,
   DEFAULT_TEMPLATE,
   FIELD_LABELS_KEY,
+  FIELD_DEFINITIONS_KEY,
   DESCRIPTION_KEY,
   DEFAULT_DESCRIPTION
 } from "@/lib/constants";
@@ -72,7 +73,25 @@ function sanitizeTemplateField(raw: unknown): TemplateField | null {
   if (type === "scale") {
     const min = typeof raw.min === "number" ? raw.min : 1;
     const max = typeof raw.max === "number" ? raw.max : 5;
-    return { id, label, type: "scale", min, max };
+
+    let scoreDescriptions: Record<string, string> | undefined;
+    if (isObject(raw.scoreDescriptions)) {
+      const cleaned = Object.entries(raw.scoreDescriptions).reduce<Record<string, string>>((acc, [key, value]) => {
+        if (typeof value === "string") {
+          const next = value.trim();
+          if (next) {
+            acc[key] = next;
+          }
+        }
+        return acc;
+      }, {});
+
+      if (Object.keys(cleaned).length > 0) {
+        scoreDescriptions = cleaned;
+      }
+    }
+
+    return { id, label, type: "scale", min, max, scoreDescriptions };
   }
 
   if (type === "boolean") return { id, label, type: "boolean" };
@@ -85,6 +104,7 @@ export async function getTemplate(): Promise<TemplateField[]> {
   if (!Array.isArray(template)) {
     await kvSet(TEMPLATE_KEY, DEFAULT_TEMPLATE);
     await mergeFieldLabels(DEFAULT_TEMPLATE);
+    await mergeFieldDefinitions(DEFAULT_TEMPLATE);
     return DEFAULT_TEMPLATE;
   }
 
@@ -95,6 +115,7 @@ export async function getTemplate(): Promise<TemplateField[]> {
   if (cleaned.length === 0) {
     await kvSet(TEMPLATE_KEY, DEFAULT_TEMPLATE);
     await mergeFieldLabels(DEFAULT_TEMPLATE);
+    await mergeFieldDefinitions(DEFAULT_TEMPLATE);
     return DEFAULT_TEMPLATE;
   }
 
@@ -104,6 +125,13 @@ export async function getTemplate(): Promise<TemplateField[]> {
 function fieldsToLabelMap(fields: TemplateField[]): Record<string, string> {
   return fields.reduce<Record<string, string>>((acc, field) => {
     acc[field.id] = field.label;
+    return acc;
+  }, {});
+}
+
+function fieldsToDefinitionMap(fields: TemplateField[]): Record<string, TemplateField> {
+  return fields.reduce<Record<string, TemplateField>>((acc, field) => {
+    acc[field.id] = field;
     return acc;
   }, {});
 }
@@ -122,16 +150,41 @@ export async function getFieldLabels(): Promise<Record<string, string>> {
   }, {});
 }
 
+export async function getFieldDefinitions(): Promise<Record<string, TemplateField>> {
+  const raw = await kvGet<unknown>(FIELD_DEFINITIONS_KEY);
+  if (!isObject(raw)) {
+    return {};
+  }
+
+  return Object.entries(raw).reduce<Record<string, TemplateField>>((acc, [key, value]) => {
+    if (!isObject(value)) return acc;
+    const merged = { ...value, id: key };
+    const field = sanitizeTemplateField(merged);
+    if (field) {
+      acc[key] = field;
+    }
+    return acc;
+  }, {});
+}
+
 async function mergeFieldLabels(fields: TemplateField[]): Promise<void> {
   const current = await getFieldLabels();
   const incoming = fieldsToLabelMap(fields);
   await kvSet(FIELD_LABELS_KEY, { ...current, ...incoming });
 }
 
+async function mergeFieldDefinitions(fields: TemplateField[]): Promise<void> {
+  const current = await getFieldDefinitions();
+  const incoming = fieldsToDefinitionMap(fields);
+  await kvSet(FIELD_DEFINITIONS_KEY, { ...current, ...incoming });
+}
+
 export async function setTemplate(template: TemplateField[]): Promise<void> {
   const currentTemplate = await getTemplate();
   await mergeFieldLabels(currentTemplate);
+  await mergeFieldDefinitions(currentTemplate);
   await mergeFieldLabels(template);
+  await mergeFieldDefinitions(template);
   await kvSet(TEMPLATE_KEY, template);
 }
 

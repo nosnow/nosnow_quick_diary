@@ -10,6 +10,7 @@ export type ScaleTemplateField = BaseTemplateField & {
   type: "scale";
   min?: number;
   max?: number;
+  scoreDescriptions?: Record<string, string>;
 };
 
 export type BooleanTemplateField = BaseTemplateField & {

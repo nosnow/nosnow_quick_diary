@@ -1,11 +1,12 @@
-import { getFieldLabels, getTemplate, setTemplate } from "@/lib/journal";
+import { getFieldDefinitions, getFieldLabels, getTemplate, setTemplate } from "@/lib/journal";
 import { TemplateField } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   const template = await getTemplate();
   const fieldLabels = await getFieldLabels();
-  return NextResponse.json({ template, fieldLabels });
+  const fieldDefinitions = await getFieldDefinitions();
+  return NextResponse.json({ template, fieldLabels, fieldDefinitions });
 }
 
 export async function POST(req: Request) {

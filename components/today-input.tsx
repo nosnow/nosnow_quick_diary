@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { TemplateField } from "@/lib/types";
 import { todayDateStringUTC8 } from "@/lib/date";
 
@@ -47,27 +48,54 @@ function ScalePicker({
 }
 
 function ReadonlyValue({ field, value }: { field: TemplateField; value: string | number | boolean | null }) {
+  const [tipOpen, setTipOpen] = useState(false);
+
   if (field.type === "scale") {
     const max = field.max ?? 5;
     const numericValue = typeof value === "number" ? value : null;
     const current = numericValue !== null ? String(numericValue) : "-";
+    const scoreKey = numericValue !== null ? String(numericValue) : "";
+    const description = scoreKey ? field.scoreDescriptions?.[scoreKey] : undefined;
     const half = max / 2;
     const scoreColorClass =
       numericValue === null ? "text-[#2b3854]" : numericValue > half ? "text-[#4f7d45]" : numericValue < half ? "text-[#ca552f]" : "text-[#2b3854]";
 
     return (
-      <div className="flex items-baseline gap-1">
+      <div className="flex items-center gap-2">
         <span className={`text-2xl font-semibold leading-none ${scoreColorClass}`}>{current}</span>
         <span className="text-sm text-[#5f6d86]">/{max}</span>
+        {description && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setTipOpen((prev) => !prev)}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#ddcfb6] bg-white text-xs text-[#5f6d86]"
+              aria-label="查看分数说明"
+            >
+              i
+            </button>
+            {tipOpen && (
+              <div className="absolute left-0 top-8 z-10 w-56 rounded-lg border border-[#ddcfb6] bg-white p-2 text-xs leading-5 text-[#2b3854] shadow-md">
+                {description}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
 
   if (field.type === "boolean") {
     const isTrue = value === true;
+    const isFalse = value === false;
+
+    if (!isTrue && !isFalse) {
+      return <div className="text-base font-medium text-[#5f6d86]">-</div>;
+    }
+
     return (
-      <div className={`text-base font-medium ${isTrue ? "text-[#4f7d45]" : "text-[#ca552f]"}`}>
-        {isTrue ? "是" : "否"}
+      <div className={`text-xl font-semibold leading-none ${isTrue ? "text-[#4f7d45]" : "text-[#ca552f]"}`}>
+        {isTrue ? "✓" : "✕"}
       </div>
     );
   }
@@ -100,6 +128,7 @@ export function TodayInput({
   hasEntry,
   status
 }: TodayInputProps) {
+  const [openScaleTipKey, setOpenScaleTipKey] = useState<string | null>(null);
   const today = todayDateStringUTC8();
   const dateText = new Date(`${date}T00:00:00`).toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
 
@@ -135,13 +164,37 @@ export function TodayInput({
 
                 {field.type === "scale" && (
                   (isEditing ? (
-                    <ScalePicker
-                      field={field}
-                      value={typeof value === "number" ? value : null}
-                      onSelect={(next) => {
-                        onChange(field.id, next);
-                      }}
-                    />
+                    <div className="space-y-2">
+                      <ScalePicker
+                        field={field}
+                        value={typeof value === "number" ? value : null}
+                        onSelect={(next) => {
+                          onChange(field.id, next);
+                        }}
+                      />
+
+                      {typeof value === "number" && field.scoreDescriptions?.[String(value)] && (
+                        <div className="relative inline-flex items-center gap-2 text-sm text-[#5f6d86]">
+                          <span>当前分数：{value}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextKey = `${field.id}:${value}`;
+                              setOpenScaleTipKey((prev) => (prev === nextKey ? null : nextKey));
+                            }}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#ddcfb6] bg-white text-xs"
+                            aria-label="查看分数说明"
+                          >
+                            i
+                          </button>
+                          {openScaleTipKey === `${field.id}:${value}` && (
+                            <div className="absolute left-0 top-8 z-10 w-64 rounded-lg border border-[#ddcfb6] bg-white p-2 text-xs leading-5 text-[#2b3854] shadow-md">
+                              {field.scoreDescriptions[String(value)]}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <ReadonlyValue field={field} value={value} />
                   ))

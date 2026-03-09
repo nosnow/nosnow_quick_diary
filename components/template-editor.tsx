@@ -19,6 +19,15 @@ function toTemplate(fields: EditableField[]): TemplateField[] {
   return fields.map(({ uid: _uid, ...field }) => field);
 }
 
+function getScaleRange(field: EditableField): number[] {
+  if (field.type !== "scale") return [];
+  const rawMin = typeof field.min === "number" ? Math.floor(field.min) : 1;
+  const rawMax = typeof field.max === "number" ? Math.floor(field.max) : 5;
+  const min = Math.max(0, Math.min(rawMin, rawMax));
+  const max = Math.max(rawMin, rawMax);
+  return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+}
+
 export function TemplateEditor() {
   const router = useRouter();
   const [fields, setFields] = useState<EditableField[]>([]);
@@ -60,6 +69,28 @@ export function TemplateEditor() {
 
   function removeField(index: number) {
     setFields((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateScaleDescription(index: number, score: number, text: string) {
+    setFields((prev) =>
+      prev.map((item, i) => {
+        if (i !== index || item.type !== "scale") return item;
+
+        const next = { ...(item.scoreDescriptions ?? {}) };
+        const trimmed = text.trim();
+
+        if (trimmed) {
+          next[String(score)] = trimmed;
+        } else {
+          delete next[String(score)];
+        }
+
+        return {
+          ...item,
+          scoreDescriptions: Object.keys(next).length > 0 ? next : undefined
+        };
+      })
+    );
   }
 
   function moveField(index: number, delta: number) {
@@ -145,21 +176,40 @@ export function TemplateEditor() {
               </div>
 
               {field.type === "scale" && (
-                <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  <input
-                    type="number"
-                    value={field.min ?? 1}
-                    onChange={(e) => updateField(index, { min: Number(e.target.value || 1) })}
-                    className="h-10 rounded-lg border border-[#ddcfb6] px-3"
-                    placeholder="最小值"
-                  />
-                  <input
-                    type="number"
-                    value={field.max ?? 5}
-                    onChange={(e) => updateField(index, { max: Number(e.target.value || 5) })}
-                    className="h-10 rounded-lg border border-[#ddcfb6] px-3"
-                    placeholder="最大值"
-                  />
+                <div className="mt-2 space-y-3">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <input
+                      type="number"
+                      value={field.min ?? 1}
+                      onChange={(e) => updateField(index, { min: Number(e.target.value || 1) })}
+                      className="h-10 rounded-lg border border-[#ddcfb6] px-3"
+                      placeholder="最小值"
+                    />
+                    <input
+                      type="number"
+                      value={field.max ?? 5}
+                      onChange={(e) => updateField(index, { max: Number(e.target.value || 5) })}
+                      className="h-10 rounded-lg border border-[#ddcfb6] px-3"
+                      placeholder="最大值"
+                    />
+                  </div>
+
+                  <div className="rounded-lg border border-[#efe4d2] bg-[#fcf8f0] p-3">
+                    <p className="mb-2 text-xs text-[#5f6d86]">分数说明（可选）：在日记页点击图标可查看对应说明</p>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {getScaleRange(field).map((score) => (
+                        <label key={`${field.uid}-score-${score}`} className="flex items-center gap-2 text-sm text-[#2b3854]">
+                          <span className="inline-flex w-8 shrink-0 justify-center rounded border border-[#ddcfb6] bg-white py-1">{score}</span>
+                          <input
+                            value={field.scoreDescriptions?.[String(score)] ?? ""}
+                            onChange={(e) => updateScaleDescription(index, score, e.target.value)}
+                            className="h-9 w-full rounded-lg border border-[#ddcfb6] bg-white px-3"
+                            placeholder={`分数 ${score} 的说明`}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 

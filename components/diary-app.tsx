@@ -44,6 +44,7 @@ function buildStreakMap(dates: string[]): Record<string, number> {
 export function DiaryApp() {
   const [template, setTemplate] = useState<TemplateField[]>([]);
   const [fieldLabels, setFieldLabels] = useState<Record<string, string>>({});
+  const [fieldDefinitions, setFieldDefinitions] = useState<Record<string, TemplateField>>({});
   const [records, setRecords] = useState<Record<string, DiaryRecord>>({});
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(todayString());
@@ -80,6 +81,7 @@ export function DiaryApp() {
         const bootstrapJson = (await bootstrapRes.json()) as {
           template?: TemplateField[];
           fieldLabels?: Record<string, string>;
+          fieldDefinitions?: Record<string, TemplateField>;
           dates?: string[];
           date?: string;
           record?: DiaryRecord | null;
@@ -95,6 +97,7 @@ export function DiaryApp() {
 
         setTemplate(Array.isArray(bootstrapJson.template) ? bootstrapJson.template : []);
         setFieldLabels(bootstrapJson.fieldLabels ?? {});
+        setFieldDefinitions(bootstrapJson.fieldDefinitions ?? {});
         setDates(nextDates);
         setRecords(initialRecordMap);
         setNotebookDescription(
@@ -120,6 +123,11 @@ export function DiaryApp() {
     const legacyFields = Object.keys(savedRecord)
       .filter((key) => !templateIds.has(key))
       .map((key) => {
+        const archivedField = fieldDefinitions[key];
+        if (archivedField) {
+          return archivedField;
+        }
+
         const fallbackLabel = fieldLabels[key] ?? key;
         const value = savedRecord[key];
 
@@ -134,7 +142,7 @@ export function DiaryApp() {
       });
 
     return [...template, ...legacyFields];
-  }, [hasEntry, isEditing, template, savedRecord, fieldLabels]);
+  }, [hasEntry, isEditing, template, savedRecord, fieldLabels, fieldDefinitions]);
 
   const monthPrefix = useMemo(() => viewDate.slice(0, 7), [viewDate]);
 
