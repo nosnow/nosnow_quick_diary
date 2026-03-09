@@ -231,6 +231,7 @@ export function DiaryApp() {
   function onSelectDate(date: string) {
     setSelectedDate(date);
     setViewDate(date);
+    setShowCalendar(false);
   }
 
   function changeMonth(delta: number) {
