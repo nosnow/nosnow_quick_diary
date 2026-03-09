@@ -1,4 +1,11 @@
-import { INDEX_KEY, TEMPLATE_KEY, DEFAULT_TEMPLATE, FIELD_LABELS_KEY } from "@/lib/constants";
+import {
+  INDEX_KEY,
+  TEMPLATE_KEY,
+  DEFAULT_TEMPLATE,
+  FIELD_LABELS_KEY,
+  DESCRIPTION_KEY,
+  DEFAULT_DESCRIPTION
+} from "@/lib/constants";
 import { todayDateStringUTC8 } from "@/lib/date";
 import { redis } from "@/lib/redis";
 import { DiaryRecord, TemplateField } from "@/lib/types";
@@ -126,6 +133,20 @@ export async function setTemplate(template: TemplateField[]): Promise<void> {
   await mergeFieldLabels(currentTemplate);
   await mergeFieldLabels(template);
   await kvSet(TEMPLATE_KEY, template);
+}
+
+export async function getDescription(): Promise<string> {
+  const raw = await kvGet<unknown>(DESCRIPTION_KEY);
+  if (typeof raw !== "string") {
+    await kvSet(DESCRIPTION_KEY, DEFAULT_DESCRIPTION);
+    return DEFAULT_DESCRIPTION;
+  }
+
+  return raw;
+}
+
+export async function setDescription(description: string): Promise<void> {
+  await kvSet(DESCRIPTION_KEY, description);
 }
 
 export async function getRecord(date: string): Promise<DiaryRecord | null> {

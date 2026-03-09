@@ -8,6 +8,7 @@ import { todayDateStringUTC8 } from "@/lib/date";
 import { DiaryRecord, TemplateField } from "@/lib/types";
 
 const EMPTY_RECORD: DiaryRecord = {};
+const DEFAULT_NOTEBOOK_DESCRIPTION = "每天仅一条日记，键格式：journal:YYYY-MM-DD（编辑会更新当天记录）。";
 
 type ExportField = {
   code: string;
@@ -59,6 +60,10 @@ export function DiaryApp() {
   const [monthExportError, setMonthExportError] = useState<string>("");
   const [exportYear, setExportYear] = useState<string>(new Date().getFullYear().toString());
   const [exportMonth, setExportMonth] = useState<string>(String(new Date().getMonth() + 1).padStart(2, "0"));
+  const [notebookDescription, setNotebookDescription] = useState<string>(DEFAULT_NOTEBOOK_DESCRIPTION);
+  const [isEditingDescription, setIsEditingDescription] = useState<boolean>(false);
+  const [descriptionDraft, setDescriptionDraft] = useState<string>("");
+  const [isSavingDescription, setIsSavingDescription] = useState<boolean>(false);
 
   const streakMap = useMemo(() => buildStreakMap(dates), [dates]);
 
@@ -78,6 +83,7 @@ export function DiaryApp() {
           dates?: string[];
           date?: string;
           record?: DiaryRecord | null;
+          description?: string;
         };
 
         const nextDates = Array.isArray(bootstrapJson.dates) ? bootstrapJson.dates : [];
@@ -91,6 +97,9 @@ export function DiaryApp() {
         setFieldLabels(bootstrapJson.fieldLabels ?? {});
         setDates(nextDates);
         setRecords(initialRecordMap);
+        setNotebookDescription(
+          typeof bootstrapJson.description === "string" ? bootstrapJson.description : DEFAULT_NOTEBOOK_DESCRIPTION
+        );
         setStatus("已就绪");
         setDataLoaded(true);
       } catch {
@@ -296,6 +305,47 @@ export function DiaryApp() {
     window.location.href = `/api/export?format=csv${params}`;
   }
 
+  function startEditNotebookDescription() {
+    setDescriptionDraft(notebookDescription);
+    setIsEditingDescription(true);
+  }
+
+  function cancelEditNotebookDescription() {
+    setDescriptionDraft("");
+    setIsEditingDescription(false);
+  }
+
+  async function saveNotebookDescription() {
+    if (descriptionDraft === notebookDescription) {
+      setIsEditingDescription(false);
+      return;
+    }
+
+    setIsSavingDescription(true);
+
+    try {
+      const res = await fetch("/api/description", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ description: descriptionDraft })
+      });
+
+      if (!res.ok) {
+        setStatus("日记本描述保存失败");
+        setIsSavingDescription(false);
+        return;
+      }
+
+      setNotebookDescription(descriptionDraft);
+      setIsEditingDescription(false);
+      setIsSavingDescription(false);
+      setStatus("日记本描述已保存");
+    } catch {
+      setStatus("日记本描述保存失败");
+      setIsSavingDescription(false);
+    }
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8">
       <section className="mb-4 card p-4 fade-in">
@@ -455,15 +505,52 @@ export function DiaryApp() {
       </section>
 
       <header className="mt-4 card p-4 md:p-5 fade-in">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
+        <div className="flex flex-col gap-3">
+          <div className="w-full min-w-0">
             <h1 className="text-2xl md:text-3xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
               在线日记本
             </h1>
-            <p className="text-sm text-[#4d5a72]">每天仅一条日记，键格式：journal:YYYY-MM-DD（编辑会更新当天记录）。</p>
+            {isEditingDescription ? (
+              <div className="mt-2 space-y-2 w-full">
+                <textarea
+                  value={descriptionDraft}
+                  onChange={(e) => setDescriptionDraft(e.target.value)}
+                  rows={3}
+                  className="block w-full rounded-lg border border-[#ddcfb6] bg-white p-3 text-sm text-[#22304f]"
+                  placeholder="请输入日记本描述"
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-[#4d5a72] whitespace-pre-wrap">{notebookDescription}</p>
+            )}
           </div>
-          <div className="flex flex-col gap-2 md:items-end">
-            <Link className="text-sm text-[#ca552f] underline" href="/template">
+
+          <div className="flex flex-wrap gap-2">
+            {isEditingDescription ? (
+              <>
+                <button
+                  type="button"
+                  className="h-9 rounded-lg bg-[#ca552f] px-3 text-sm text-white disabled:opacity-60"
+                  onClick={saveNotebookDescription}
+                  disabled={isSavingDescription}
+                >
+                  {isSavingDescription ? "保存中..." : "保存描述"}
+                </button>
+                <button
+                  type="button"
+                  className="h-9 rounded-lg border border-[#ddcfb6] bg-white px-3 text-sm"
+                  onClick={cancelEditNotebookDescription}
+                  disabled={isSavingDescription}
+                >
+                  取消
+                </button>
+              </>
+            ) : (
+              <button type="button" className="h-9 rounded-lg border border-[#ddcfb6] bg-white px-3 text-sm" onClick={startEditNotebookDescription}>
+                编辑日记本描述
+              </button>
+            )}
+            <Link className="inline-flex h-9 items-center rounded-lg border border-[#ddcfb6] bg-white px-3 text-sm text-[#2b3854]" href="/template">
               编辑模板
             </Link>
           </div>

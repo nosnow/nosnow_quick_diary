@@ -1,4 +1,4 @@
-import { getFieldLabels, getRecord, getTemplate, listRecordDates } from "@/lib/journal";
+import { getDescription, getFieldLabels, getRecord, getTemplate, listRecordDates } from "@/lib/journal";
 import { DiaryRecord, TemplateField } from "@/lib/types";
 import { NextResponse } from "next/server";
 
@@ -7,10 +7,11 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const date = url.searchParams.get("date")?.trim() ?? "";
 
-  const [template, fieldLabels, dates] = await Promise.all([
+  const [template, fieldLabels, dates, description] = await Promise.all([
     getTemplate(),
     getFieldLabels(),
-    listRecordDates()
+    listRecordDates(),
+    getDescription()
   ]);
 
   let record: DiaryRecord | null = null;
@@ -23,7 +24,8 @@ export async function GET(req: Request) {
     fieldLabels,
     dates,
     date,
-    record
+    record,
+    description
   });
 
   const durationMs = Math.round(performance.now() - start);

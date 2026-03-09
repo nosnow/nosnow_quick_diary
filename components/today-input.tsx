@@ -46,6 +46,48 @@ function ScalePicker({
   );
 }
 
+function ReadonlyValue({ field, value }: { field: TemplateField; value: string | number | boolean | null }) {
+  if (field.type === "scale") {
+    const max = field.max ?? 5;
+    const numericValue = typeof value === "number" ? value : null;
+    const current = numericValue !== null ? String(numericValue) : "-";
+    const half = max / 2;
+    const scoreColorClass =
+      numericValue === null ? "text-[#2b3854]" : numericValue > half ? "text-[#4f7d45]" : numericValue < half ? "text-[#ca552f]" : "text-[#2b3854]";
+
+    return (
+      <div className="flex items-baseline gap-1">
+        <span className={`text-2xl font-semibold leading-none ${scoreColorClass}`}>{current}</span>
+        <span className="text-sm text-[#5f6d86]">/{max}</span>
+      </div>
+    );
+  }
+
+  if (field.type === "boolean") {
+    const isTrue = value === true;
+    return (
+      <div className={`text-base font-medium ${isTrue ? "text-[#4f7d45]" : "text-[#ca552f]"}`}>
+        {isTrue ? "是" : "否"}
+      </div>
+    );
+  }
+
+  if (field.type === "text") {
+    const text = typeof value === "string" ? value : "";
+    return (
+      <div className="w-full text-[15px] leading-6 text-[#2b3854] whitespace-pre-wrap">
+        {text || "（空）"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-base font-medium text-[#2b3854]">
+      {typeof value === "number" ? value : "-"}
+    </div>
+  );
+}
+
 export function TodayInput({
   date,
   template,
@@ -82,50 +124,70 @@ export function TodayInput({
         {template.map((field) => {
           const value = record[field.id] ?? null;
           return (
-            <div key={field.id}>
-              <label className="mb-2 block text-sm font-medium text-[#2b3854]">{field.label}</label>
+            <div key={field.id} className={isEditing ? "" : "flex items-start gap-4 rounded-xl bg-[#fbf6ee] px-4 py-3"}>
+              <label
+                className={`block text-sm font-medium ${isEditing ? "mb-2 text-[#2b3854]" : "w-24 shrink-0 pt-0.5 text-[#6a768d]"}`}
+              >
+                {field.label}
+              </label>
 
-              {field.type === "scale" && (
-                <ScalePicker
-                  field={field}
-                  value={typeof value === "number" ? value : null}
-                  onSelect={(next) => {
-                    if (isEditing) onChange(field.id, next);
-                  }}
-                />
-              )}
+              <div className={isEditing ? "" : "flex-1"}>
 
-              {field.type === "boolean" && (
-                <button
-                  type="button"
-                  disabled={!isEditing}
-                  onClick={() => onChange(field.id, !(value === true))}
-                  className={`h-11 rounded-lg border px-4 text-base ${value === true ? "border-[#4f7d45] bg-[#e3f0df]" : "border-[#ddcfb6] bg-white"} ${!isEditing ? "cursor-not-allowed opacity-70" : ""}`}
-                >
-                  {value === true ? "是" : "否"}
-                </button>
-              )}
+                {field.type === "scale" && (
+                  (isEditing ? (
+                    <ScalePicker
+                      field={field}
+                      value={typeof value === "number" ? value : null}
+                      onSelect={(next) => {
+                        onChange(field.id, next);
+                      }}
+                    />
+                  ) : (
+                    <ReadonlyValue field={field} value={value} />
+                  ))
+                )}
 
-              {field.type === "text" && (
-                <textarea
-                  readOnly={!isEditing}
-                  value={typeof value === "string" ? value : ""}
-                  onChange={(e) => onChange(field.id, e.target.value)}
-                  className={`min-h-20 w-full rounded-lg border border-[#ddcfb6] bg-white p-3 ${!isEditing ? "cursor-not-allowed bg-[#f8f4ea]" : ""}`}
-                  placeholder="快速记录"
-                />
-              )}
+                {field.type === "boolean" && (
+                  (isEditing ? (
+                    <button
+                      type="button"
+                      onClick={() => onChange(field.id, !(value === true))}
+                      className={`h-11 rounded-lg border px-4 text-base ${value === true ? "border-[#4f7d45] bg-[#e3f0df]" : "border-[#ddcfb6] bg-white"}`}
+                    >
+                      {value === true ? "是" : "否"}
+                    </button>
+                  ) : (
+                    <ReadonlyValue field={field} value={value} />
+                  ))
+                )}
 
-              {field.type === "number" && (
-                <input
-                  readOnly={!isEditing}
-                  value={typeof value === "number" ? value : ""}
-                  onChange={(e) => onChange(field.id, Number(e.target.value || 0))}
-                  type="number"
-                  className={`h-11 w-full rounded-lg border border-[#ddcfb6] bg-white px-3 ${!isEditing ? "cursor-not-allowed bg-[#f8f4ea]" : ""}`}
-                  placeholder="输入数字"
-                />
-              )}
+                {field.type === "text" && (
+                  (isEditing ? (
+                    <textarea
+                      value={typeof value === "string" ? value : ""}
+                      onChange={(e) => onChange(field.id, e.target.value)}
+                      className="min-h-20 w-full rounded-lg border border-[#ddcfb6] bg-white p-3"
+                      placeholder="快速记录"
+                    />
+                  ) : (
+                    <ReadonlyValue field={field} value={value} />
+                  ))
+                )}
+
+                {field.type === "number" && (
+                  (isEditing ? (
+                    <input
+                      value={typeof value === "number" ? value : ""}
+                      onChange={(e) => onChange(field.id, Number(e.target.value || 0))}
+                      type="number"
+                      className="h-11 w-full rounded-lg border border-[#ddcfb6] bg-white px-3"
+                      placeholder="输入数字"
+                    />
+                  ) : (
+                    <ReadonlyValue field={field} value={value} />
+                  ))
+                )}
+              </div>
             </div>
           );
         })}
