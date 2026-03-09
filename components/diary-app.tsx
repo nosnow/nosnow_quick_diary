@@ -205,7 +205,17 @@ export function DiaryApp() {
   }
 
   function saveNow() {
-    void persist(selectedDate, draftRecord);
+    const normalizedRecord: DiaryRecord = { ...draftRecord };
+
+    for (const field of template) {
+      if (field.type !== "boolean") continue;
+      const raw = normalizedRecord[field.id];
+      if (raw !== true && raw !== false) {
+        normalizedRecord[field.id] = false;
+      }
+    }
+
+    void persist(selectedDate, normalizedRecord);
   }
 
   function updateField(fieldId: string, value: string | number | boolean) {
