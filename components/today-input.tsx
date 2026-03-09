@@ -17,6 +17,18 @@ type TodayInputProps = {
   status: string;
 };
 
+function normalizeBoolean(value: string | number | boolean | null): boolean | null {
+  if (value === true || value === false) return value;
+  if (value === 1 || value === "1") return true;
+  if (value === 0 || value === "0") return false;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+  return null;
+}
+
 function ScalePicker({
   field,
   value,
@@ -86,16 +98,14 @@ function ReadonlyValue({ field, value }: { field: TemplateField; value: string |
   }
 
   if (field.type === "boolean") {
-    const isTrue = value === true;
-    const isFalse = value === false;
-
-    if (!isTrue && !isFalse) {
+    const normalized = normalizeBoolean(value);
+    if (normalized === null) {
       return <div className="text-base font-medium text-[#5f6d86]">-</div>;
     }
 
     return (
-      <div className={`text-xl font-semibold leading-none ${isTrue ? "text-[#4f7d45]" : "text-[#ca552f]"}`}>
-        {isTrue ? "✓" : "✕"}
+      <div className={`text-xl font-semibold leading-none ${normalized ? "text-[#4f7d45]" : "text-[#ca552f]"}`}>
+        {normalized ? "✓" : "✕"}
       </div>
     );
   }
